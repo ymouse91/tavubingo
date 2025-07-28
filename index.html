@@ -90,6 +90,8 @@
     fetch('sanat_s2.txt')
       .then(response => response.text())
       .then(data => {
+        // Muuta ajatusviivat tavalliseksi tavuviivaksi käsittelyä varten
+        data = data.replace(/[–—]/g, "—");
         tavulista = data.split("\n").map(l => l.trim()).filter(Boolean);
         laskeTaajuudet();
         fileLoaded = true;
@@ -111,7 +113,7 @@ function laskeTaajuudet() {
   const freq = {};
   let tavuMaara = 0;
   for (let sana of tavulista) {
-    const tavut = sana.split("-");
+    const tavut = sana.split(/[-—]/);
     for (let t of tavut) {
       freq[t] = (freq[t] || 0) + 1;
       tavuMaara++;
@@ -211,18 +213,21 @@ function chooseWord() {
     document.getElementById("word").textContent = "Kaikki sanat käytetty!";
     return;
   }
-  const sanaPainot = unusedWords.map(s => s.split("-").reduce((sum, t) => sum + (taajuudet[t] || 1), 0));
+  const sanaPainot = unusedWords.map(s => s.split(/[-—]/).reduce((sum, t) => sum + (taajuudet[t] || 1), 0));
   const total = sanaPainot.reduce((a, b) => a + b, 0);
   let r = Math.random() * total;
 
   for (let i = 0; i < unusedWords.length; i++) {
     r -= sanaPainot[i];
     if (r <= 0) {
-      correctTavut = unusedWords[i].split("-");
+      correctTavut = unusedWords[i].split(/[-—]/);
       usedWords.add(unusedWords[i]);
       currentWordCount++;
-      latestWord = unusedWords[i].replace(/-/g, '');
-      latestWord = latestWord.replace(/—/g, '-');
+      
+      // 1️⃣ säilytä ajatusviiva yhdyssanan erottimena, mutta poista kaikki muut tavuviivat
+      let temp = unusedWords[i].replace(/-/g, ""); // poistaa tavalliset tavuviivat
+      latestWord = temp.replace(/—/g, "-");       // muuttaa ajatusviivan sanakirjan tavuviivaksi
+
       const kotusLink = `https://www.kielitoimistonsanakirja.fi/#/${latestWord}`;
       document.getElementById("word").innerHTML = `<b>${latestWord}</b> [${currentWordCount}] <button class='speak-btn' onclick=\"speak(latestWord)\">🔊</button> <a href='${kotusLink}' target='_blank'><button class='define-btn'>📖</button></a>`;
       speak(latestWord);
