@@ -19,15 +19,34 @@
     @keyframes blink { 50% { background: white; color: red; } }
     @keyframes button-blink { 0% { background-color: #ff0; } 50% { background-color: #fff; } 100% { background-color: #ff0; } }
     #word { font-size: 32px; margin: 10px; }
-    button { padding: 10px 20px; font-size: 16px; margin: 5px; }
-    .speak-btn, .define-btn {
-      font-size: 20px; margin-left: 8px; cursor: pointer;
-    }
-    .blink-button {
-      animation: button-blink 1s infinite;
-    }
-    /* Modal */
-    #statsModal {
+button {
+  padding: 10px 20px;
+  font-size: 16px;
+  margin: 5px;
+  background-color: #fff;   /* <-- Perusväri PC:lle */
+  border: 1px solid #999;
+}
+.blink-button {
+  animation: button-blink 1s infinite;
+  background-color: #ff0;   /* <-- Alkuväri varmuuden vuoksi */
+}
+button:hover {
+  background-color: #eef;   /* nappi vaihtaa väriä kun hiiri on sen päällä */
+  cursor: pointer;
+}
+
+button:active {
+  background-color: #cce;   /* nappi vaihtaa väriä kun sitä klikataan */
+}
+.blink-button:hover {
+  background-color: #ff8;   /* hieman tummempi keltainen hoverin aikana */
+}
+.blink-button:active {
+  background-color: #fc0;   /* syvempi keltainen kun klikataan */
+}
+
+    /* Modalit */
+    #statsModal, #wordsModal {
       display: none;
       position: fixed;
       z-index: 1000;
@@ -35,13 +54,17 @@
       width: 100%; height: 100%;
       background: rgba(0,0,0,0.4);
     }
-    #statsContent {
+    #statsContent, #wordsContent {
       background: #fff; padding: 20px; border-radius: 10px;
-      max-width: 400px; margin: 15% auto; text-align: left;
+      max-width: 90%; margin: 5% auto; text-align: left;
     }
-    #closeModal {
+    #wordsContent {
+      max-height: 80%; overflow-y: auto; /* skrollattava lista */
+    }
+    #closeModal, #closeWordsModal {
       float: right; cursor: pointer; font-size: 20px; font-weight: bold;
     }
+    #wordList a { display: block; text-decoration: none; color: #0066cc; margin: 2px 0; }
   </style>
 </head>
 <body>
@@ -52,12 +75,22 @@
   <button id="continueBtn" onclick="checkSelection()">Jatka</button>
   <button onclick="endGame()">Lopeta</button>
 
-  <!-- Modal dialog -->
+  <!-- Tilastodialogi -->
   <div id="statsModal">
     <div id="statsContent">
       <span id="closeModal">&times;</span>
       <h2>Pelitilastot</h2>
       <div id="statsText"></div>
+      <p style="margin-top:10px; font-size:12px; color:#666;">Versio: 1.0.0</p>
+    </div>
+  </div>
+
+  <!-- Sanalista-dialogi -->
+  <div id="wordsModal">
+    <div id="wordsContent">
+      <span id="closeWordsModal">&times;</span>
+      <h2>Arvotut sanat</h2>
+      <div id="wordList"></div>
     </div>
   </div>
 
@@ -69,6 +102,7 @@
     let gridSize = 3;
     let gameEnded = true;
     let usedWords = new Set();
+    let drawnWords = [];
     let fileLoaded = false;
     let currentWordCount = 0;
     let latestWord = "";
@@ -76,21 +110,27 @@
     let tavoitePaino = 0;
     let statsString = "";
 
-    // Modal references
-    const modal = document.getElementById("statsModal");
+    const statsModal = document.getElementById("statsModal");
+    const wordsModal = document.getElementById("wordsModal");
     const statsText = document.getElementById("statsText");
+    const wordListDiv = document.getElementById("wordList");
+
     document.getElementById("title").addEventListener("click", () => {
       statsText.innerHTML = statsString;
-      modal.style.display = "block";
+      statsModal.style.display = "block";
     });
-    document.getElementById("closeModal").onclick = () => { modal.style.display = "none"; };
-    window.onclick = (e) => { if (e.target == modal) modal.style.display = "none"; };
 
-    // 🔄 Lataa sanasto automaattisesti
+    document.getElementById("closeModal").onclick = () => { statsModal.style.display = "none"; };
+    document.getElementById("closeWordsModal").onclick = () => { wordsModal.style.display = "none"; };
+
+    window.addEventListener('click', e => {
+      if (e.target === statsModal) statsModal.style.display = 'none';
+      if (e.target === wordsModal) wordsModal.style.display = 'none';
+    });
+
     fetch('sanat_s2.txt')
       .then(response => response.text())
       .then(data => {
-        // Muuta ajatusviivat tavalliseksi tavuviivaksi käsittelyä varten
         data = data.replace(/[–—]/g, "—");
         tavulista = data.split("\n").map(l => l.trim()).filter(Boolean);
         laskeTaajuudet();
@@ -119,7 +159,6 @@ function laskeTaajuudet() {
       tavuMaara++;
     }
   }
-  
   taajuudet = Object.fromEntries(Object.entries(freq).filter(([t, n]) => n > 1));
 
   const summaKaikki = Object.values(freq).reduce((a, b) => a + b, 0);
@@ -136,6 +175,7 @@ function startNewGame() {
   gameEnded = false;
   correctTavut = [];
   usedWords.clear();
+  drawnWords = [];
   currentWordCount = 0;
   createGrid();
   document.getElementById("continueBtn").classList.remove("blink-button");
@@ -203,7 +243,8 @@ function createGrid() {
     g.appendChild(div);
     grid.push(div);
   }
-  statsString = `<br>Ruudukon paino: ${totalWeight}`;
+  statsString = statsString.replace(/<br>Ruudukon paino: .*?(?=<|$)/, "");
+  statsString += `<br>Ruudukon paino: ${totalWeight}`;
 }
 
 function chooseWord() {
@@ -222,11 +263,11 @@ function chooseWord() {
     if (r <= 0) {
       correctTavut = unusedWords[i].split(/[-—]/);
       usedWords.add(unusedWords[i]);
+      drawnWords.push(unusedWords[i]);
       currentWordCount++;
       
-      // 1️⃣ säilytä ajatusviiva yhdyssanan erottimena, mutta poista kaikki muut tavuviivat
-      let temp = unusedWords[i].replace(/-/g, ""); // poistaa tavalliset tavuviivat
-      latestWord = temp.replace(/—/g, "-");       // muuttaa ajatusviivan sanakirjan tavuviivaksi
+      let temp = unusedWords[i].replace(/-/g, "");
+      latestWord = temp.replace(/—/g, "-");
 
       const kotusLink = `https://www.kielitoimistonsanakirja.fi/#/${latestWord}`;
       document.getElementById("word").innerHTML = `<b>${latestWord}</b> [${currentWordCount}] <button class='speak-btn' onclick=\"speak(latestWord)\">🔊</button> <a href='${kotusLink}' target='_blank'><button class='define-btn'>📖</button></a>`;
@@ -237,21 +278,22 @@ function chooseWord() {
 }
 
 function checkSelection() {
+  // Jos peli on päättynyt (Bingo tai Lopeta), aloitetaan uusi peli
   if (gameEnded) {
-    gameEnded = false;
-    document.getElementById("continueBtn").classList.remove("blink-button");
-    createGrid();
-    setTimeout(chooseWord, 1800);
+    // Käynnistä uusi peli, jolloin myös drawnWords ja currentWordCount nollautuvat
+    startNewGame();
     return;
   }
-  if (gameEnded) return;
+
   let animated = false;
+  let anyCorrect = false;
   for (const cell of grid) {
     const t = cell.dataset.tavu;
     if (cell.classList.contains("selected")) {
       if (correctTavut.includes(t)) {
         cell.classList.remove("selected");
         cell.classList.add("correct");
+        anyCorrect = true;
       } else {
         cell.classList.remove("selected");
         cell.classList.add("wrong");
@@ -263,52 +305,41 @@ function checkSelection() {
     }
   }
 
+  // Vilkutetaan kaikki oikeat, mutta valitsematta jääneet tavut
+  for (const cell of grid) {
+    if (correctTavut.includes(cell.dataset.tavu) && !cell.classList.contains("correct")) {
+      cell.style.background = "gold";
+      cell.style.animation = "blink 0.5s 3";
+      setTimeout(() => {
+        cell.style.background = "";
+        cell.style.animation = "";
+      }, 1500);
+      animated = true;
+    }
+  }
+
   if (checkVictory()) {
     highlightBingo();
     gameEnded = true;
     usedWords.clear();
     speak("Bingo");
-    document.getElementById("word").innerHTML = `<span style='font-size: 32px;'>Bingo!</span> <span style='font-size: 20px;'>[ ${currentWordCount} sanaa arvottu]</span>`;
+    document.getElementById("word").innerHTML = `<span style='font-size: 32px;'>Bingo!</span> <span style='font-size: 20px; cursor:pointer; text-decoration:underline;' onclick=\"showWordsModal()\">[ ${currentWordCount} sanaa arvottu]</span>`;
     currentWordCount = 0;
     document.getElementById("continueBtn").classList.add("blink-button");
     return;
-  } else {
-    for (const cell of grid) {
-      const t = cell.dataset.tavu;
-      if (correctTavut.includes(t) && !cell.classList.contains("correct")) {
-        cell.style.background = "gold";
-        cell.style.animation = "blink 0.5s 3";
-        setTimeout(() => {
-          cell.style.background = "";
-          cell.style.animation = "";
-          cell.classList.remove("selected");
-        }, 1500);
-        animated = true;
-      }
-    }
-    if (animated) {
-      setTimeout(chooseWord, 1800);
-    } else {
-      chooseWord();
-    }
   }
+
+  setTimeout(chooseWord, 800);
 }
 
-function checkVictory() {
-  const isCorrect = i => grid[i].classList.contains("correct");
-  const lines = [];
-  for (let r = 0; r < gridSize; r++) lines.push([...Array(gridSize).keys()].map(c => r * gridSize + c));
-  for (let c = 0; c < gridSize; c++) lines.push([...Array(gridSize).keys()].map(r => r * gridSize + c));
-  lines.push([...Array(gridSize).keys()].map(i => i * (gridSize + 1)));
-  lines.push([...Array(gridSize).keys()].map(i => (i + 1) * (gridSize - 1)));
-  return lines.some(line => line.every(i => isCorrect(i)));
-}
 
 function endGame() {
   gameEnded = true;
-  currentWordCount = 0;
   usedWords.clear();
-  document.getElementById("word").textContent = "Peli lopetettu.";
+
+
+  speak("Peli lopetettu");
+  document.getElementById("word").innerHTML = `<span style='font-size: 24px;'>Peli lopetettu.</span> <span style='font-size: 20px; cursor:pointer; text-decoration:underline;' onclick=\"showWordsModal()\">[ ${drawnWords.length} sanaa arvottu]</span>`;
   document.getElementById("continueBtn").classList.add("blink-button");
 }
 
@@ -328,6 +359,24 @@ function highlightBingo() {
     }
   }
 }
+
+function checkVictory() {
+  const isCorrect = i => grid[i].classList.contains("correct");
+  const lines = [];
+  for (let r = 0; r < gridSize; r++) lines.push([...Array(gridSize).keys()].map(c => r * gridSize + c));
+  for (let c = 0; c < gridSize; c++) lines.push([...Array(gridSize).keys()].map(r => r * gridSize + c));
+  lines.push([...Array(gridSize).keys()].map(i => i * (gridSize + 1)));
+  lines.push([...Array(gridSize).keys()].map(i => (i + 1) * (gridSize - 1)));
+  return lines.some(line => line.every(i => isCorrect(i)));
+}
+
+function showWordsModal() {
+  wordListDiv.innerHTML = "";
+  drawnWords.forEach(word => {
+    const displayWord = word.replace(/—/g, "-").replace(/-/g, "");
+    const linkWord = word.replace(/-/g, "").replace(/—/g, "-");
+    wordListDiv.innerHTML += `<a href='https://www.kielitoimistonsanakirja.fi/#/${linkWord}' target='_blank'>${displayWord}</a>`;
+  });
+  wordsModal.style.display = "block";
+}
   </script>
-</body>
-</html>
