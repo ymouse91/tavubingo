@@ -2,7 +2,7 @@
 <html lang="fi">
 <head>
   <meta charset="UTF-8">
-  <title>Tavubingo Testi</title>
+  <title>Tavubingo</title>
   <style>
     body { font-family: sans-serif; text-align: center; margin: 30px; }
     .grid { display: grid; gap: 5px; justify-content: center; margin: 20px auto; }
@@ -22,7 +22,6 @@
     #stats { font-size: 14px; margin: 5px; color: #444; }
     #gridInfo { font-size: 14px; margin-top: -10px; color: #444; text-align: right; width: 270px; margin-left: auto; }
     button { padding: 10px 20px; font-size: 16px; margin: 5px; }
-    #fileInput { margin: 10px auto; }
     .speak-btn, .define-btn {
       font-size: 20px; margin-left: 8px; cursor: pointer;
     }
@@ -32,10 +31,9 @@
   </style>
 </head>
 <body>
-  <h1>Tavubingo Testi</h1>
-  <input type="file" id="fileInput" accept=".txt" />
+  <h1>Tavubingo</h1>
   <div id="stats"></div>
-  <div id="word">Lataa sanalista...</div>
+  <div id="word">Ladataan sanalista...</div>
   <div class="grid" id="grid"></div>
   <div id="gridInfo"></div>
   <button id="continueBtn" onclick="checkSelection()">Jatka</button>
@@ -55,27 +53,25 @@
     let keskimaarainenTavupaino = 0;
     let tavoitePaino = 0;
 
-    document.getElementById("fileInput").addEventListener("change", handleFile);
+    // 🔄 Lataa sanasto automaattisesti
+    fetch('sanat_s2.txt')
+      .then(response => response.text())
+      .then(data => {
+        tavulista = data.split("\n").map(l => l.trim()).filter(Boolean);
+        laskeTaajuudet();
+        fileLoaded = true;
+        startNewGame();
+      })
+      .catch(error => {
+        document.getElementById("word").textContent = "Virhe sanaston latauksessa!";
+        console.error(error);
+      });
 
 function speak(text) {
   const utterance = new SpeechSynthesisUtterance(text);
   utterance.lang = "fi-FI";
   utterance.rate = 0.8;
   speechSynthesis.speak(utterance);
-}
-
-function handleFile(event) {
-  const file = event.target.files[0];
-  if (!file) return;
-  const reader = new FileReader();
-  reader.onload = function(e) {
-    const lines = e.target.result.split("\n").map(l => l.trim()).filter(Boolean);
-    tavulista = lines;
-    laskeTaajuudet();
-    fileLoaded = true;
-    startNewGame();
-  };
-  reader.readAsText(file, 'utf-8');
 }
 
 function laskeTaajuudet() {
