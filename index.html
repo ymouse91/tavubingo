@@ -19,8 +19,6 @@
     @keyframes blink { 50% { background: white; color: red; } }
     @keyframes button-blink { 0% { background-color: #ff0; } 50% { background-color: #fff; } 100% { background-color: #ff0; } }
     #word { font-size: 32px; margin: 10px; }
-    #stats { font-size: 14px; margin: 5px; color: #444; }
-    #gridInfo { font-size: 14px; margin-top: -10px; color: #444; text-align: right; width: 270px; margin-left: auto; }
     button { padding: 10px 20px; font-size: 16px; margin: 5px; }
     .speak-btn, .define-btn {
       font-size: 20px; margin-left: 8px; cursor: pointer;
@@ -28,16 +26,40 @@
     .blink-button {
       animation: button-blink 1s infinite;
     }
+    /* Modal */
+    #statsModal {
+      display: none;
+      position: fixed;
+      z-index: 1000;
+      left: 0; top: 0;
+      width: 100%; height: 100%;
+      background: rgba(0,0,0,0.4);
+    }
+    #statsContent {
+      background: #fff; padding: 20px; border-radius: 10px;
+      max-width: 400px; margin: 15% auto; text-align: left;
+    }
+    #closeModal {
+      float: right; cursor: pointer; font-size: 20px; font-weight: bold;
+    }
   </style>
 </head>
 <body>
-  <h1>Tavubingo</h1>
-  <div id="stats"></div>
+  <h1 id="title">Tavubingo</h1>
   <div id="word">Ladataan sanalista...</div>
   <div class="grid" id="grid"></div>
   <div id="gridInfo"></div>
   <button id="continueBtn" onclick="checkSelection()">Jatka</button>
   <button onclick="endGame()">Lopeta</button>
+
+  <!-- Modal dialog -->
+  <div id="statsModal">
+    <div id="statsContent">
+      <span id="closeModal">&times;</span>
+      <h2>Pelitilastot</h2>
+      <div id="statsText"></div>
+    </div>
+  </div>
 
   <script>
     let tavulista = [];
@@ -52,6 +74,17 @@
     let latestWord = "";
     let keskimaarainenTavupaino = 0;
     let tavoitePaino = 0;
+    let statsString = "";
+
+    // Modal references
+    const modal = document.getElementById("statsModal");
+    const statsText = document.getElementById("statsText");
+    document.getElementById("title").addEventListener("click", () => {
+      statsText.innerHTML = statsString;
+      modal.style.display = "block";
+    });
+    document.getElementById("closeModal").onclick = () => { modal.style.display = "none"; };
+    window.onclick = (e) => { if (e.target == modal) modal.style.display = "none"; };
 
     // 🔄 Lataa sanasto automaattisesti
     fetch('sanat_s2.txt')
@@ -93,8 +126,7 @@ function laskeTaajuudet() {
 
   tavoitePaino = keskimaarainenTavupaino * (gridSize * gridSize) * 6;
 
-  const stats = `Sanoja: ${tavulista.length}, Tavujen lkm: ${tavuMaara}, Erilaisia tavuja: ${Object.keys(freq).length}, Keskimääräinen tavupaino: ${keskimaarainenTavupaino.toFixed(2)}, Tavoitepaino: ${tavoitePaino.toFixed(1)}`;
-  document.getElementById("stats").textContent = stats;
+  statsString = `Sanoja: ${tavulista.length}<br>Tavujen lkm: ${tavuMaara}<br>Erilaisia tavuja: ${Object.keys(freq).length}<br>Keskimääräinen tavupaino: ${keskimaarainenTavupaino.toFixed(2)}<br>Tavoitepaino: ${tavoitePaino.toFixed(1)}`;
 }
 
 function startNewGame() {
@@ -169,7 +201,7 @@ function createGrid() {
     g.appendChild(div);
     grid.push(div);
   }
-  document.getElementById("gridInfo").textContent = `Ruudukon paino: ${totalWeight} (tavoite: ${tavoitePaino.toFixed(1)})`;
+  statsString += `<br>Ruudukon paino: ${totalWeight}`;
 }
 
 function chooseWord() {
@@ -190,9 +222,7 @@ function chooseWord() {
       usedWords.add(unusedWords[i]);
       currentWordCount++;
       latestWord = unusedWords[i].replace(/-/g, '');
-
       latestWord = latestWord.replace(/—/g, '-');
-      
       const kotusLink = `https://www.kielitoimistonsanakirja.fi/#/${latestWord}`;
       document.getElementById("word").innerHTML = `<b>${latestWord}</b> [${currentWordCount}] <button class='speak-btn' onclick=\"speak(latestWord)\">🔊</button> <a href='${kotusLink}' target='_blank'><button class='define-btn'>📖</button></a>`;
       speak(latestWord);
@@ -232,7 +262,6 @@ function checkSelection() {
     highlightBingo();
     gameEnded = true;
     usedWords.clear();
-    // Näytetään bingo ja lisätään arvottujen sanojen määrä
     speak("Bingo");
     document.getElementById("word").innerHTML = `<span style='font-size: 32px;'>Bingo!</span> <span style='font-size: 20px;'>[ ${currentWordCount} sanaa arvottu]</span>`;
     currentWordCount = 0;
