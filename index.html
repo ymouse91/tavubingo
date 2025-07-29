@@ -2,13 +2,22 @@
 <html lang="fi">
 <head>
   <meta charset="UTF-8">
-  <link rel="manifest" href="manifest.json">
-<meta name="theme-color" content="#4caf50">
-
-
-  <title>Tavubingo</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>TAVUBINGO</title>
   <style>
-    body { font-family: sans-serif; text-align: center; margin: 30px; }
+    html, body {
+      width: 100%;
+      height: 100%;
+      margin: 0;
+      padding: 0;
+      overflow-x: hidden;
+      background-color: #fff;
+    }
+
+    body {
+      font-family: sans-serif; text-align: center; margin: 30px;
+    }
+
     .grid { display: grid; gap: 5px; justify-content: center; margin: 20px auto; }
     .cell {
       width: 80px; height: 80px;
@@ -20,34 +29,55 @@
     .cell.selected { background: lightblue; }
     .cell.correct { background: lightgreen; }
     .cell.wrong { background: red; color: white; animation: blink 0.4s 2; }
+
     @keyframes blink { 50% { background: white; color: red; } }
     @keyframes button-blink { 0% { background-color: #ff0; } 50% { background-color: #fff; } 100% { background-color: #ff0; } }
-    #word { font-size: 32px; margin: 10px; }
-button {
-  padding: 10px 20px;
-  font-size: 16px;
-  margin: 5px;
-  background-color: #fff;   /* <-- Perusväri PC:lle */
-  border: 1px solid #999;
-}
-.blink-button {
-  animation: button-blink 1s infinite;
-  background-color: #ff0;   /* <-- Alkuväri varmuuden vuoksi */
-}
-button:hover {
-  background-color: #eef;   /* nappi vaihtaa väriä kun hiiri on sen päällä */
-  cursor: pointer;
-}
 
-button:active {
-  background-color: #cce;   /* nappi vaihtaa väriä kun sitä klikataan */
-}
-.blink-button:hover {
-  background-color: #ff8;   /* hieman tummempi keltainen hoverin aikana */
-}
-.blink-button:active {
-  background-color: #fc0;   /* syvempi keltainen kun klikataan */
-}
+    #word { font-size: 32px; margin: 10px; }
+
+    button {
+      padding: 10px 20px;
+      font-size: 16px;
+      margin: 5px;
+      background-color: #fff;
+      border: 1px solid #999;
+    }
+
+    /* Hover ja active -tilat PC:lle */
+    @media (hover: hover) and (pointer: fine) {
+      button:hover {
+        background-color: #eef;
+        cursor: pointer;
+      }
+    }
+
+    button:active {
+      background-color: #cce;
+    }
+
+    .speak-btn, .define-btn {
+      font-size: 20px; margin-left: 8px; cursor: pointer;
+    }
+
+    .blink-button {
+      animation: button-blink 1s infinite; background-color: #ff0;
+    }
+    .blink-button:hover { background-color: #ff8; }
+    .blink-button:active { background-color: #fc0; }
+
+    /* Käytetyt sanat -listan keskitys ja leveys */
+    #wordList {
+      margin: 0 auto;
+      max-width: 20ch; /* noin 20 merkkiä leveä */
+      text-align: center;
+    }
+
+    #wordList a {
+      display: block;
+      text-decoration: none;
+      color: #0066cc;
+      margin: 2px 0;
+    }
 
     /* Modalit */
     #statsModal, #wordsModal {
@@ -58,22 +88,34 @@ button:active {
       width: 100%; height: 100%;
       background: rgba(0,0,0,0.4);
     }
-    #statsContent, #wordsContent {
-      background: #fff; padding: 20px; border-radius: 10px;
-      max-width: 90%; margin: 5% auto; text-align: left;
-    }
-    #wordsContent {
-      max-height: 80%; overflow-y: auto; /* skrollattava lista */
-    }
-    #closeModal, #closeWordsModal {
-      float: right; cursor: pointer; font-size: 20px; font-weight: bold;
-    }
-    #wordList a { display: block; text-decoration: none; color: #0066cc; margin: 2px 0; }
-  </style>
-</head>
 
+    /* Yhdistetty ja siivottu dialogin tyyli */
+    #statsContent, #wordsContent {
+      background: #fff;
+      padding: 20px;
+      border-radius: 10px;
+      max-width: 320px; /* rajoitetaan dialogi kapeammaksi */
+      margin: 5% auto;
+      text-align: center;
+    }
+
+    #wordsContent {
+      max-height: 80%;
+      overflow-y: auto; /* skrollattava lista */
+    }
+
+    #closeModal, #closeWordsModal {
+      float: right;
+      cursor: pointer;
+      font-size: 20px;
+      font-weight: bold;
+    }
+
+  </style>
+
+</head>
 <body>
-  <h1 id="title">Tavubingo</h1>
+  <h1 id="title">TAVUBINGO</h1>
   <div id="word">Ladataan sanalista...</div>
   <div class="grid" id="grid"></div>
   <div id="gridInfo"></div>
@@ -86,7 +128,7 @@ button:active {
       <span id="closeModal">&times;</span>
       <h2>Pelitilastot</h2>
       <div id="statsText"></div>
-      <p style="margin-top:10px; font-size:12px; color:#666;">Versio: 1.0.0</p>
+      <p style="margin-top:10px; font-size:12px; color:#666;">Versio: 1.0.1</p>
     </div>
   </div>
 
@@ -275,7 +317,7 @@ function chooseWord() {
       latestWord = temp.replace(/—/g, "-");
 
       const kotusLink = `https://www.kielitoimistonsanakirja.fi/#/${latestWord}`;
-      document.getElementById("word").innerHTML = `<b>${latestWord}</b> [${currentWordCount}] <button class='speak-btn' onclick=\"speak(latestWord)\">🔊</button> <a href='${kotusLink}' target='_blank'><button class='define-btn'>📖</button></a>`;
+      document.getElementById("word").innerHTML = `<b>${latestWord}</b> [${currentWordCount}] <br><button class='speak-btn' onclick=\"speak(latestWord)\">🔊</button> <a href='${kotusLink}' target='_blank'><button class='define-btn'>📖</button></a>`;
       speak(latestWord);
       return;
     }
@@ -328,7 +370,7 @@ function checkSelection() {
     gameEnded = true;
     usedWords.clear();
     speak("Bingo");
-    document.getElementById("word").innerHTML = `<span style='font-size: 32px;'>Bingo!</span> <span style='font-size: 20px; cursor:pointer; text-decoration:underline;' onclick=\"showWordsModal()\">[ ${currentWordCount} sanaa arvottu]</span>`;
+    document.getElementById("word").innerHTML = `<span style='font-size: 32px;'>Bingo!</span> <br><span style='font-size: 20px; cursor:pointer; text-decoration:underline;' onclick=\"showWordsModal()\">[ ${currentWordCount} sanaa arvottu]</span>`;
     currentWordCount = 0;
     document.getElementById("continueBtn").classList.add("blink-button");
     return;
@@ -344,7 +386,7 @@ function endGame() {
 
 
   speak("Peli lopetettu");
-  document.getElementById("word").innerHTML = `<span style='font-size: 24px;'>Peli lopetettu.</span> <span style='font-size: 20px; cursor:pointer; text-decoration:underline;' onclick=\"showWordsModal()\">[ ${drawnWords.length} sanaa arvottu]</span>`;
+  document.getElementById("word").innerHTML = `<span style='font-size: 24px;'>Peli lopetettu.</span> <br><span style='font-size: 20px; cursor:pointer; text-decoration:underline;' onclick=\"showWordsModal()\">[ ${drawnWords.length} sanaa arvottu]</span>`;
   document.getElementById("continueBtn").classList.add("blink-button");
 }
 
@@ -378,9 +420,10 @@ function checkVictory() {
 function showWordsModal() {
   wordListDiv.innerHTML = "";
   drawnWords.forEach(word => {
-    const displayWord = word.replace(/—/g, "-").replace(/-/g, "");
-    const linkWord = word.replace(/-/g, "").replace(/—/g, "-");
-    wordListDiv.innerHTML += `<a href='https://www.kielitoimistonsanakirja.fi/#/${linkWord}' target='_blank'>${displayWord}</a>`;
+
+	const linkWord = word.replace(/—/g, "-"); 
+
+    wordListDiv.innerHTML += `<a href='https://www.kielitoimistonsanakirja.fi/#/${linkWord}' target='_blank'>${linkWord}</a>`;
   });
   wordsModal.style.display = "block";
 }
