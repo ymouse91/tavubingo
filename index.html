@@ -144,7 +144,7 @@
     </div>
   </div>
 
-  <script>
+<script>
     let tavulista = [];
     let taajuudet = {};
     let grid = [];
@@ -159,6 +159,7 @@
     let keskimaarainenTavupaino = 0;
     let tavoitePaino = 0;
     let statsString = "";
+    let jatkaKaynnissa = false;
 
     const statsModal = document.getElementById("statsModal");
     const wordsModal = document.getElementById("wordsModal");
@@ -327,66 +328,69 @@ function chooseWord() {
   }
 }
 
-function checkSelection() {
-  // Jos peli on päättynyt (Bingo tai Lopeta), aloitetaan uusi peli
-  if (gameEnded) {
-    // Käynnistä uusi peli, jolloin myös drawnWords ja currentWordCount nollautuvat
-    startNewGame();
-    return;
-  }
+async function checkSelection() {
+  if (jatkaKaynnissa) return;
+  jatkaKaynnissa = true;
 
-  let animated = false;
-  let anyCorrect = false;
-  for (const cell of grid) {
-    const t = cell.dataset.tavu;
-    if (cell.classList.contains("selected")) {
-      if (correctTavut.includes(t)) {
-        cell.classList.remove("selected");
-        cell.classList.add("correct");
-        anyCorrect = true;
-      } else {
-        cell.classList.remove("selected");
-        cell.classList.add("wrong");
+  try {
+    if (gameEnded) {
+      startNewGame();
+      return;
+    }
+
+    let animated = false;
+    let anyCorrect = false;
+    for (const cell of grid) {
+      const t = cell.dataset.tavu;
+      if (cell.classList.contains("selected")) {
+        if (correctTavut.includes(t)) {
+          cell.classList.remove("selected");
+          cell.classList.add("correct");
+          anyCorrect = true;
+        } else {
+          cell.classList.remove("selected");
+          cell.classList.add("wrong");
+          setTimeout(() => {
+            cell.classList.remove("wrong");
+          }, 800);
+          animated = true;
+        }
+      }
+    }
+
+    for (const cell of grid) {
+      if (correctTavut.includes(cell.dataset.tavu) && !cell.classList.contains("correct")) {
+        cell.style.background = "gold";
+        cell.style.animation = "blink 0.5s 3";
         setTimeout(() => {
-          cell.classList.remove("wrong");
-        }, 800);
+          cell.style.background = "";
+          cell.style.animation = "";
+        }, 1500);
         animated = true;
       }
     }
-  }
 
-  // Vilkutetaan kaikki oikeat, mutta valitsematta jääneet tavut
-  for (const cell of grid) {
-    if (correctTavut.includes(cell.dataset.tavu) && !cell.classList.contains("correct")) {
-      cell.style.background = "gold";
-      cell.style.animation = "blink 0.5s 3";
-      setTimeout(() => {
-        cell.style.background = "";
-        cell.style.animation = "";
-      }, 1500);
-      animated = true;
+    if (checkVictory()) {
+      highlightBingo();
+      gameEnded = true;
+      usedWords.clear();
+      speak("Bingo");
+      document.getElementById("word").innerHTML = `<span style='font-size: 32px;'>Bingo!</span> <br><span style='font-size: 20px; cursor:pointer; text-decoration:underline;' onclick=\"showWordsModal()\">[ ${currentWordCount} sanaa arvottu]</span>`;
+      currentWordCount = 0;
+      document.getElementById("continueBtn").classList.add("blink-button");
+      return;
     }
-  }
 
-  if (checkVictory()) {
-    highlightBingo();
-    gameEnded = true;
-    usedWords.clear();
-    speak("Bingo");
-    document.getElementById("word").innerHTML = `<span style='font-size: 32px;'>Bingo!</span> <br><span style='font-size: 20px; cursor:pointer; text-decoration:underline;' onclick=\"showWordsModal()\">[ ${currentWordCount} sanaa arvottu]</span>`;
-    currentWordCount = 0;
-    document.getElementById("continueBtn").classList.add("blink-button");
-    return;
-  }
+    setTimeout(chooseWord, 800);
 
-  setTimeout(chooseWord, 800);
+  } finally {
+    setTimeout(() => { jatkaKaynnissa = false; }, 900);
+  }
 }
-
 
 function endGame() {
   gameEnded = true;
   usedWords.clear();
-
 
   speak("Peli lopetettu");
   document.getElementById("word").innerHTML = `<span style='font-size: 24px;'>Peli lopetettu.</span> <br><span style='font-size: 20px; cursor:pointer; text-decoration:underline;' onclick=\"showWordsModal()\">[ ${drawnWords.length} sanaa arvottu]</span>`;
@@ -423,18 +427,18 @@ function checkVictory() {
 function showWordsModal() {
   wordListDiv.innerHTML = "";
   drawnWords.forEach(word => {
-
 	const linkWord = word.replace(/—/g, "-"); 
-
     wordListDiv.innerHTML += `<a href='https://www.kielitoimistonsanakirja.fi/#/${linkWord}' target='_blank'>${linkWord}</a>`;
   });
   wordsModal.style.display = "block";
 }
-  if ("serviceWorker" in navigator) {
-    window.addEventListener("load", () => {
-      navigator.serviceWorker.register("service-worker.js");
-    });
-  }
-  </script>
+
+if ("serviceWorker" in navigator) {
+  window.addEventListener("load", () => {
+    navigator.serviceWorker.register("service-worker.js");
+  });
+}
+</script>
+
 </body>
 </html>
