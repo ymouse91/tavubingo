@@ -145,6 +145,38 @@
   </div>
 
 <script>
+function showSplash() {
+  const splash = document.createElement('div');
+  splash.style.position = 'fixed';
+  splash.style.top = 0;
+  splash.style.left = 0;
+  splash.style.width = '100%';
+  splash.style.height = '100%';
+  splash.style.backgroundColor = '#fff';
+  splash.style.display = 'flex';
+  splash.style.alignItems = 'center';
+  splash.style.justifyContent = 'center';
+  splash.style.zIndex = 9999;
+  splash.style.transition = 'opacity 1s ease';
+
+  const img = document.createElement('img');
+  img.src = 'icons/tavubingo-512.png';
+  img.style.maxWidth = '60%';
+  img.style.maxHeight = '60%';
+  splash.appendChild(img);
+  
+  document.body.appendChild(splash);
+
+  // Poistetaan näkyvistä hetken päästä
+  setTimeout(() => {
+    splash.style.opacity = '0';
+    setTimeout(() => splash.remove(), 1000);
+  }, 1500);
+}
+
+// Käynnistetään splash heti sivun latauduttua
+window.addEventListener('load', showSplash);
+
     let tavulista = [];
     let taajuudet = {};
     let grid = [];
