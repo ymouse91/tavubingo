@@ -1,14 +1,13 @@
 const CACHE_NAME = "tavubingo-cache-v1";
 const urlsToCache = [
-  "/",
-  "/index.html",
-  "/manifest.json",
-  "/service-worker.js",
-  "/sanat_s2.txt",
-  "/style.css",    // jos erillinen css on
-  "/script.js",    // jos erillinen js on
-  "/icons/tavubingo-192.png",
-  "/icons/tavubingo-512.png"
+  "./",
+  "./index.html",
+  "./manifest.json",
+  "./sanat_s2.txt",
+  "./style.css",    // jos erillinen css on
+  "./script.js",    // jos erillinen js on
+  "./icons/tavubingo-192.png",
+  "./icons/tavubingo-512.png"
 ];
 
 self.addEventListener("install", event => {
