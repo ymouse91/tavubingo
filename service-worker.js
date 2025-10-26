@@ -4,8 +4,6 @@ const urlsToCache = [
   "./index.html",
   "./manifest.json",
   "./sanat_s2.txt",
-  "./style.css",    // jos erillinen css on
-  "./script.js",    // jos erillinen js on
   "./icons/tavubingo-192.png",
   "./icons/tavubingo-512.png"
 ];
